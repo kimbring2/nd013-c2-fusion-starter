@@ -70,9 +70,17 @@ def measure_detection_performance(detections, labels, labels_valid, min_iou=0.5)
                 dist_z = z - _z
                 
                 ## step 5 : compute the intersection over union (IOU) between label and detection bounding-box
+                '''
+                #First submission - Wrong case, No Union
+                
                 intersection = det_poly.intersection(label_poly)
                 iou = intersection.area / label_poly.area
+                '''
                 
+                intersection = det_poly.intersection(label_poly)
+                union = det_poly.union(label_poly)
+                iou = intersection.area / union.area
+               
                 ## step 6 : if IOU exceeds min_iou threshold, store [iou, dist_x, dist_y, dist_z] in matches_lab_det and increase the TP count
                 if iou > min_iou:
                     matches_lab_det.append([iou, dist_x, dist_y, dist_z])
@@ -92,6 +100,8 @@ def measure_detection_performance(detections, labels, labels_valid, min_iou=0.5)
     print("student task ID_S4_EX2")
     
     # compute positives and negatives for precision/recall
+    '''
+    # First submission - Wrong case, 
     
     ## step 1 : compute the total number of positives present in the scene
     all_positives = len(detections)
@@ -103,6 +113,15 @@ def measure_detection_performance(detections, labels, labels_valid, min_iou=0.5)
 
     ## step 3 : compute the number of false positives
     false_positives = all_positives - true_positives
+    '''
+    ## step 1 : compute the total number of positives present in the scene
+    all_positives = np.count_nonzero(labels_valid == True)
+
+    ## step 2 : compute the number of false negatives
+    false_negatives = all_positives - true_positives
+
+    ## step 3 : compute the number of false positives
+    false_positives = len(detections) - true_positives
     
     #######
     ####### ID_S4_EX2 END #######     
