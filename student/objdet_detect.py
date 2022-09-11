@@ -33,7 +33,6 @@ from tools.objdet_models.darknet.utils.evaluation_utils import post_processing_v
 
 # load model-related parameters into an edict
 def load_configs_model(model_name='darknet', configs=None):
-
     # init config file, if none has been passed
     if configs == None:
         configs = edict()  
@@ -56,6 +55,7 @@ def load_configs_model(model_name='darknet', configs=None):
         configs.num_samples = None
         configs.num_workers = 4
         configs.pin_memory = True
+        configs.min_iou = 0.5
         configs.use_giou_loss = False
 
     elif model_name == 'fpn_resnet':
@@ -83,6 +83,7 @@ def load_configs_model(model_name='darknet', configs=None):
         configs.input_size = (608, 608)
         configs.hm_size = (152, 152)
         configs.down_ratio = 4
+        configs.min_iou = 0.5
         configs.max_objects = 50
         configs.heads = {
             'hm_cen': configs.num_classes,
@@ -108,9 +109,8 @@ def load_configs_model(model_name='darknet', configs=None):
 
 # load all object-detection parameters into an edict
 def load_configs(model_name='fpn_resnet', configs=None):
-
     # init config file, if none has been passed
-    if configs==None:
+    if configs == None:
         configs = edict()    
 
     # birds-eye view (bev) parameters
@@ -133,7 +133,6 @@ def load_configs(model_name='fpn_resnet', configs=None):
 
 # create model according to selected model type
 def create_model(configs):
-
     # check for availability of model file
     assert os.path.isfile(configs.pretrained_filename), "No file at {}".format(configs.pretrained_filename)
 
@@ -182,7 +181,8 @@ def detect_objects(input_bev_maps, model, configs):
         # decode model output into target object format
         if 'darknet' in configs.arch:
             # perform post-processing
-            output_post = post_processing_v2(outputs, conf_thresh=configs.conf_thresh, nms_thresh=configs.nms_thresh) 
+            output_post = post_processing_v2(outputs, conf_thresh=configs.conf_thresh, 
+                                             nms_thresh=configs.nms_thresh) 
             detections = []
             for sample_i in range(len(output_post)):
                 if output_post[sample_i] is None:
@@ -193,21 +193,20 @@ def detect_objects(input_bev_maps, model, configs):
                     x, y, w, l, im, re, _, _, _ = obj
                     yaw = np.arctan2(im, re)
                     detections.append([1, x, y, 0.0, 1.50, w, l, yaw])    
-
         elif 'fpn_resnet' in configs.arch:
             # decode output and perform post-processing
             ####### ID_S3_EX1-5 START #######     
             #######
             print("student task ID_S3_EX1-5") 
             
-            detections = decode(outputs['hm_cen'], outputs['cen_offset'], outputs['direction'], outputs['z_coor'],
+            detections = decode(outputs['hm_cen'], outputs['cen_offset'], outputs['direction'], 
+                                outputs['z_coor'],
                                 outputs['dim'], K=configs.K)
             detections = detections.cpu().numpy().astype(np.float32)
             detections = post_processing(detections, configs)
 
-            detections = detections[0]  # only first batch
+            detections = detections[0][1]  # only first batch
             
-
             #######
             ####### ID_S3_EX1-5 END #######     
 
@@ -218,10 +217,11 @@ def detect_objects(input_bev_maps, model, configs):
     objects = [] 
 
     ## step 1 : check whether there are any detections
-    #print("detections: ", detections)
-    if len(detections[1]) > 0:
+    #if len(detections[1]) > 0:
+    if len(detections) > 0:
         ## step 2 : loop over all detections
-        for det in detections[1]:
+        #for det in detections[1]:
+        for det in detections:
             # (scores-0:1, x-1:2, y-2:3, z-3:4, dim-4:7, yaw-7:8)
             ## step 3 : perform the conversion using the limits for x, y and z set in the configs structure
             _score, _x, _y, _z, _h, _w, _l, _yaw = det
@@ -233,6 +233,7 @@ def detect_objects(input_bev_maps, model, configs):
             w = _w * (configs.lim_y[1] - configs.lim_y[0]) / configs.bev_width
             l = _l * (configs.lim_x[1] - configs.lim_x[0]) / configs.bev_height
             yaw = -_yaw
+            
             det_object = [1, x, y, z, h, w, l, yaw]
         
             ## step 4 : append the current object to the 'objects' array
