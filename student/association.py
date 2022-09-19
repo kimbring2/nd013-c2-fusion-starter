@@ -24,6 +24,7 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 import misc.params as params 
 
 use_camera = params.use_camera
+step3 = params.step3
 
 class Association:
     '''Data association class with single nearest neighbor association and gating based on Mahalanobis distance'''
@@ -39,7 +40,7 @@ class Association:
         # - update list of unassigned measurements and unassigned tracks
         ############
         
-        if use_camera == True:
+        if step3 == True:
             # the following only works for at most one track and one measurement
             N = len(track_list) # N tracks
             M = len(meas_list) # M measurements
@@ -58,18 +59,37 @@ class Association:
                         if self.gating(dist, meas.sensor):
                             self.association_matrix[i,j] = dist
         else:
-            # the following only works for at most one track and one measurement
-            self.association_matrix = np.matrix([]) # reset matrix
-            self.unassigned_tracks = [] # reset lists
-            self.unassigned_meas = []
+            if use_camera == False: 
+                # the following only works for at most one track and one measurement
+                self.association_matrix = np.matrix([]) # reset matrix
+                self.unassigned_tracks = [] # reset lists
+                self.unassigned_meas = []
 
-            if len(meas_list) > 0:
-                self.unassigned_meas = [0]
-            if len(track_list) > 0:
-                self.unassigned_tracks = [0]
-            if len(meas_list) > 0 and len(track_list) > 0: 
-                self.association_matrix = np.matrix([[0]])
+                if len(meas_list) > 0:
+                    self.unassigned_meas = [0]
+                if len(track_list) > 0:
+                    self.unassigned_tracks = [0]
+                if len(meas_list) > 0 and len(track_list) > 0: 
+                    self.association_matrix = np.matrix([[0]])
+            elif use_camera == True:        
+                # the following only works for at most one track and one measurement
+                N = len(track_list) # N tracks
+                M = len(meas_list) # M measurements
+                self.unassigned_tracks = list(range(N))
+                self.unassigned_meas = list(range(M))
 
+                # initialize association matrix
+                self.association_matrix = np.inf * np.ones((N,M)) 
+
+                if N > 0 and M > 0:     
+                    for i in range(N): 
+                        track = track_list[i]
+                        for j in range(M):
+                            meas = meas_list[j]
+                            dist = self.MHD(track, meas, KF)
+                            if self.gating(dist, meas.sensor):
+                                self.association_matrix[i,j] = dist
+            
             ############
             # END student code
             ############ 
@@ -116,7 +136,7 @@ class Association:
         # TODO Step 3: return True if measurement lies inside gate, otherwise False
         ############
         
-        limit = chi2.ppf(0.9995, df=sensor.dim_meas)
+        limit = chi2.ppf(params.gating_threshold, df=6)
         if MHD < limit:
             return True
         else:

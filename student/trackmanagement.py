@@ -128,7 +128,7 @@ class Trackmanagement:
                     self.delete_track(track)
                     
             if track.state == 'initialized':
-                if track.score <= -0.0:
+                if track.score <= -5.0:
                     self.delete_track(track)
 
         ############
