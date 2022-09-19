@@ -31,10 +31,13 @@ from tools.waymo_reader.simple_waymo_open_dataset_reader import utils as waymo_u
 from tools.waymo_reader.simple_waymo_open_dataset_reader import WaymoDataFileReader, dataset_pb2, label_pb2
 
 
+
 ##################
 # LIDAR
+
 def compute_beam_inclinations(calibration, height):
     """ Compute the inclination angle for each beam in a range image. """
+
     if len(calibration.beam_inclinations) > 0:
         return np.array(calibration.beam_inclinations)
     else:
@@ -46,6 +49,7 @@ def compute_beam_inclinations(calibration, height):
 
 def compute_range_image_polar(range_image, extrinsic, inclination):
     """ Convert a range image to polar coordinates. """
+
     height = range_image.shape[0]
     width = range_image.shape[1]
 
@@ -60,6 +64,7 @@ def compute_range_image_polar(range_image, extrinsic, inclination):
 
 def compute_range_image_cartesian(range_image_polar, extrinsic, pixel_pose, frame_pose):
     """ Convert polar coordinates to cartesian coordinates. """
+
     azimuth = range_image_polar[0]
     inclination = range_image_polar[1]
     range_image_range = range_image_polar[2]
@@ -81,6 +86,7 @@ def compute_range_image_cartesian(range_image_polar, extrinsic, pixel_pose, fram
 
 def get_rotation_matrix(roll, pitch, yaw):
     """ Convert Euler angles to a rotation matrix"""
+
     cos_roll = np.cos(roll)
     sin_roll = np.sin(roll)
     cos_yaw = np.cos(yaw)
@@ -108,7 +114,6 @@ def get_rotation_matrix(roll, pitch, yaw):
 
     pose = np.einsum('ijhw,jkhw,klhw->ilhw',r_yaw,r_pitch,r_roll)
     pose = pose.transpose(2,3,0,1)
-    
     return pose
 
 
@@ -169,9 +174,9 @@ def display_laser_on_image(img, pcl, vehicle_to_image):
     for i in range(proj_pcl.shape[0]):
         cv2.circle(img, (int(proj_pcl[i,0]),int(proj_pcl[i,1])), 1, coloured_intensity[i])
 
-        
 # get lidar point cloud from frame
 def pcl_from_range_image(frame, lidar_name):
+
     # extract lidar data and range image
     lidar = waymo_utils.get(frame.lasers, lidar_name)
     range_image, camera_projection, range_image_pose = waymo_utils.parse_range_image_and_camera_projection(lidar)    # Parse the top laser range image and get the associated projection.
@@ -184,6 +189,8 @@ def pcl_from_range_image(frame, lidar_name):
     points_all = np.column_stack((pcl, pcl_attr[:, 1]))
 
     return points_all
+
+
 
 
 ##################
@@ -206,7 +213,7 @@ def project_detections_into_bev(bev_map, detections, configs, color=[]):
         # draw object bounding box into birds-eye view
         if not color:
             color = configs.obj_colors[int(_id)]
-            
+        
         # get object corners within bev image
         bev_corners = np.zeros((4, 2), dtype=np.float32)
         cos_yaw = np.cos(yaw)
@@ -229,11 +236,14 @@ def project_detections_into_bev(bev_map, detections, configs, color=[]):
         cv2.line(bev_map, (corners_int[0, 0], corners_int[0, 1]), (corners_int[3, 0], corners_int[3, 1]), (255, 255, 0), 2)
 
 
+
+
 ##################
 # LABELS AND OBJECTS
 
 # extract object labels from frame
 def validate_object_labels(object_labels, pcl, configs, min_num_points):
+
     ## Create initial list of flags where every object is set to `valid`
     valid_flags = np.ones(len(object_labels)).astype(bool)
 
@@ -251,6 +261,7 @@ def validate_object_labels(object_labels, pcl, configs, min_num_points):
 
     ## Mark labels as invalid which are ...
     for index, label in enumerate(object_labels):
+
         ## ... outside the object detection range
         label_obj = [label.type, label.box.center_x, label.box.center_y, label.box.center_z,
                      label.box.height, label.box.width, label.box.length, label.box.heading]
@@ -260,11 +271,13 @@ def validate_object_labels(object_labels, pcl, configs, min_num_points):
         if(label.detection_difficulty_level > 0 or label.type != label_pb2.Label.Type.TYPE_VEHICLE):
             valid_flags[index] = False
         
+    
     return valid_flags
 
 
 # convert ground truth labels into 3D objects
 def convert_labels_into_objects(object_labels, configs):
+    
     detections = []
     for label in object_labels:
         # transform label into a candidate object
@@ -280,7 +293,7 @@ def convert_labels_into_objects(object_labels, configs):
 
 
 # compute location of each corner of a box and returns [front_left, rear_left, rear_right, front_right]
-def compute_box_corners(x, y, w, l, yaw):
+def compute_box_corners(x,y,w,l,yaw):
     cos_yaw = np.cos(yaw)
     sin_yaw = np.sin(yaw)
     
@@ -301,6 +314,7 @@ def compute_box_corners(x, y, w, l, yaw):
 
 # checks whether label is inside detection area
 def is_label_inside_detection_area(label, configs, min_overlap=0.5):
+
     # convert current label object into Polygon object
     _, x, y, _, _, w, l, yaw = label
     label_obj_corners = compute_box_corners(x,y,w,l,yaw)
@@ -321,6 +335,7 @@ def is_label_inside_detection_area(label, configs, min_overlap=0.5):
     return False if(overlap <= min_overlap) else True
 
 
+
 ##################
 # VISUALIZATION
 
@@ -338,6 +353,7 @@ def extract_front_camera_image(frame):
 
 
 def show_bev(bev_maps, configs):
+
     bev_map = (bev_maps.squeeze().permute(1, 2, 0).numpy() * 255).astype(np.uint8)
     bev_map = cv2.resize(bev_map, (configs.bev_width, configs.bev_height))
     bev_map = cv2.rotate(bev_map, cv2.ROTATE_180)
@@ -346,6 +362,7 @@ def show_bev(bev_maps, configs):
 
 # visualize ground-truth labels as overlay in birds-eye view
 def show_objects_labels_in_bev(detections, object_labels, bev_maps, configs):
+
     # project detections and labels into birds-eye view
     bev_map = (bev_maps.squeeze().permute(1, 2, 0).numpy() * 255).astype(np.uint8)
     bev_map = cv2.resize(bev_map, (configs.bev_width, configs.bev_height))
@@ -354,12 +371,14 @@ def show_objects_labels_in_bev(detections, object_labels, bev_maps, configs):
     project_detections_into_bev(bev_map, label_detections, configs, [0,255,0])
     project_detections_into_bev(bev_map, detections, configs, [0,0,255])
     
+
     bev_map = cv2.rotate(bev_map, cv2.ROTATE_180)
     cv2.imshow('labels (green) vs. detected objects (red)', bev_map)
 
 
 # visualize detection results as overlay in birds-eye view and ground-truth labels in camera image
 def show_objects_in_bev_labels_in_camera(detections, bev_maps, image, object_labels, object_labels_valid, camera_calibration, configs):
+
     # project detections into birds-eye view
     bev_map = (bev_maps.squeeze().permute(1, 2, 0).numpy() * 255).astype(np.uint8)
     bev_map = cv2.resize(bev_map, (configs.bev_width, configs.bev_height))
@@ -390,6 +409,7 @@ def show_objects_in_bev_labels_in_camera(detections, bev_maps, image, object_lab
 
 # visualize object labels in camera image
 def project_labels_into_camera(camera_calibration, image, labels, labels_valid, img_resize_factor=1.0):
+
     # get transformation matrix from vehicle frame to image
     vehicle_to_image = waymo_utils.get_image_transform(camera_calibration)
 
@@ -413,3 +433,4 @@ def project_labels_into_camera(camera_calibration, image, labels, labels_valid, 
         return img_resized
     else:
         return image
+
