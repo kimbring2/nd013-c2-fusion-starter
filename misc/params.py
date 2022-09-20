@@ -12,7 +12,8 @@
 
 # general parameters
 dim_state = 6 # process model dimension
-use_camera = False
+use_camera = True
+step3 = False
 
 # Kalman filter parameters (Step 1)
 dt = 0.1 # time increment
@@ -29,11 +30,11 @@ sigma_p66 = 5 # initial setting for estimation error covariance P entry for vz
 weight_dim = 0.1 # sliding average parameter for dimension estimation
 
 # association parameters (Step 3)
-gating_threshold = 0.995 # percentage of correct measurements that shall lie inside gate
+gating_threshold = 0.9995 # percentage of correct measurements that shall lie inside gate
 
 # measurement parameters (Step 4)
 sigma_lidar_x = 0.1 # measurement noise standard deviation for lidar x position   
 sigma_lidar_y = 0.1 # measurement noise standard deviation for lidar y position   
 sigma_lidar_z = 0.1 # measurement noise standard deviation for lidar z position   
-sigma_cam_i = 48 # measurement noise standard deviation for image i coordinate
-sigma_cam_j = 48 # measurement noise standard deviation for image j coordinate
+sigma_cam_i = 50 # measurement noise standard deviation for image i coordinate
+sigma_cam_j = 50 # measurement noise standard deviation for image j coordinate

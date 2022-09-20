@@ -109,7 +109,7 @@ tq & 0 & 0 & q & 0 & 0 \\
    
    ![](/home/kimbring2/nd013-c2-fusion-starter/result_img/step4_graph.png)
    
-   - Result: Please check the attached video file
+   - Result: Please check the video file of workspace folder.
 
 ### 2. Do you see any benefits in camera-lidar fusion compared to lidar-only tracking (in theory and in your concrete results)?
 

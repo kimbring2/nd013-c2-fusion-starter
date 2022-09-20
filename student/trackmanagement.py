@@ -122,10 +122,10 @@ class Trackmanagement:
             if track.state == 'confirmed':
                 if track.score <= params.delete_threshold:
                     self.delete_track(track)
-              
-            if track.state == 'tentative':
-                if track.P[0,0] > params.max_P or track.P[1,1] > params.max_P:
-                    self.delete_track(track)
+            
+            #if track.state == 'tentative':
+            if track.P[0,0] > params.max_P or track.P[1,1] > params.max_P:
+                self.delete_track(track)
                     
             if track.state == 'initialized':
                 if track.score <= -5.0:
